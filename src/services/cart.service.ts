@@ -25,16 +25,33 @@ export class CartService {
 
   async recalculateCart(cart: ICart): Promise<ICart> {
     let subtotal = 0;
+    const validItems: any[] = [];
+
     for (const item of cart.items) {
-      const product = await productRepository.findById(String(item.productId));
+      let pId = String(item.productId);
+      if (!pId || pId === "undefined" || pId.includes("{")) {
+        const match = pId.match(/([0-9a-fA-F]{24})/);
+        if (match) {
+          pId = match[1];
+          item.productId = pId;
+        } else {
+          // Skip/purge corrupt item
+          continue;
+        }
+      }
+
+      const product = await productRepository.findById(pId);
       if (product) {
         const variant = product.variants.find((v: any) => v.sku === item.variantId);
         const price = variant?.priceOverride || product.price;
         item.unitPrice = price;
         item.subtotal = price * item.quantity;
         subtotal += item.subtotal;
+        validItems.push(item);
       }
     }
+
+    cart.items = validItems;
 
     cart.subtotal = subtotal;
     cart.tax = parseFloat((subtotal * 0.08).toFixed(2)); // 8% sales tax

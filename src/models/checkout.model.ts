@@ -8,6 +8,14 @@ export interface ICheckoutItem {
   subtotal: number;
 }
 
+export interface ICheckoutAddress {
+  street: string;
+  city: string;
+  state: string;
+  country: string;
+  zipCode: string;
+}
+
 export interface ICheckout extends Document {
   checkoutId: string;
   userId: mongoose.Types.ObjectId | string;
@@ -18,12 +26,22 @@ export interface ICheckout extends Document {
   shipping: number;
   tax: number;
   grandTotal: number;
+  shippingAddress: ICheckoutAddress;
+  billingAddress: ICheckoutAddress;
   paymentGateway: "razorpay" | "stripe";
   status: "pending" | "expired" | "completed" | "cancelled";
   expiresAt: Date;
   createdAt: Date;
   updatedAt: Date;
 }
+
+const CheckoutAddressSchema = new Schema<ICheckoutAddress>({
+  street: { type: String, required: true },
+  city: { type: String, required: true },
+  state: { type: String, required: true },
+  country: { type: String, required: true },
+  zipCode: { type: String, required: true },
+});
 
 const CheckoutItemSchema = new Schema<ICheckoutItem>({
   productId: { type: Schema.Types.ObjectId, ref: "Product", required: true },
@@ -44,6 +62,8 @@ const CheckoutSchema = new Schema<ICheckout>(
     shipping: { type: Number, required: true, min: 0 },
     tax: { type: Number, required: true, min: 0 },
     grandTotal: { type: Number, required: true, min: 0 },
+    shippingAddress: { type: CheckoutAddressSchema, required: true },
+    billingAddress: { type: CheckoutAddressSchema, required: true },
     paymentGateway: { type: String, enum: ["razorpay", "stripe"], required: true },
     status: {
       type: String,

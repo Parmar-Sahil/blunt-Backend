@@ -22,6 +22,7 @@ export const errorHandler = (
     message,
     data: null,
     error: err.name || "AppError",
+    errors: err.errors || undefined,
   });
 };
 export default errorHandler;

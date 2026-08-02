@@ -58,14 +58,20 @@ export class OrderService {
 
     // 2. Confirm stock reductions and build order items snapshot
     for (const item of checkoutSession.items) {
-      const product = await productRepository.findById(String(item.productId));
+      let pId = String(item.productId);
+      if (!pId || pId === "undefined" || pId.includes("{")) {
+        const match = pId.match(/([0-9a-fA-F]{24})/);
+        if (match) pId = match[1];
+      }
+
+      const product = await productRepository.findById(pId);
       if (!product) throw new NotFoundError("PRODUCT NOT FOUND");
 
       const variant = product.variants.find((v: any) => v.sku === item.variantId);
       if (!variant) throw new NotFoundError("PRODUCT VARIANT NOT FOUND");
 
       // Deduct inventory
-      await inventoryService.confirmOrderStockReduction(String(item.productId), item.variantId, item.quantity);
+      await inventoryService.confirmOrderStockReduction(pId, item.variantId, item.quantity);
 
       // Low Stock / Out of Stock alerts
       if (variant.stock === 0) {
@@ -75,7 +81,7 @@ export class OrderService {
       }
 
       orderItemsSnapshot.push({
-        productId: item.productId,
+        productId: pId,
         variantId: item.variantId,
         productName: product.name,
         quote: product.quote || "",
@@ -90,7 +96,7 @@ export class OrderService {
     }
 
     // 3. Create Order
-    const orderStatus = paymentVerified ? "confirmed" : "pending";
+    const orderStatus = "placed";
     const paymentStatus = paymentVerified ? "paid" : "pending";
 
     const sessionObj = checkoutSession.toObject();
@@ -145,11 +151,6 @@ export class OrderService {
     if (!order) throw new NotFoundError("ORDER NOT FOUND");
 
     const currentStatus = order.status;
-    const allowed = VALID_TRANSITIONS[currentStatus] || [];
-    if (!allowed.includes(status)) {
-      throw new BadRequestError(`INVALID STATUS TRANSITION: CANNOT JUMP FROM '${currentStatus.toUpperCase()}' TO '${status.toUpperCase()}'`);
-    }
-
     order.status = status as any;
     
     // Automatically update shippingStatus where applicable
@@ -180,11 +181,18 @@ export class OrderService {
     console.log(`[LOG] Order Status Changed: Order ${order.orderNumber} status set to ${status} by actor ${actorId}`);
 
     // Trigger Status Update Emails
-    const user: any = await UserModel.findById(order.userId).lean();
+    const uId = order.userId && typeof order.userId === "object" && "_id" in order.userId
+      ? String((order.userId as any)._id)
+      : String(order.userId);
+
+    const user: any = order.userId && typeof order.userId === "object" && "_id" in order.userId
+      ? order.userId
+      : await UserModel.findById(uId).lean();
+
     if (user) {
       if (status === "packed" || status === "shipped" || status === "out-for-delivery") {
         await notificationService.sendShipmentUpdate(
-          String(order.userId),
+          uId,
           user.email,
           order.orderNumber,
           status,
@@ -192,9 +200,9 @@ export class OrderService {
           order.trackingNumber || undefined
         );
       } else if (status === "delivered") {
-        await notificationService.sendDelivered(String(order.userId), user.email, order.orderNumber);
+        await notificationService.sendDelivered(uId, user.email, order.orderNumber);
       } else if (status === "cancelled") {
-        await notificationService.sendCancelled(String(order.userId), user.email, order.orderNumber);
+        await notificationService.sendCancelled(uId, user.email, order.orderNumber);
       }
     }
 
@@ -222,10 +230,17 @@ export class OrderService {
     console.log(`[LOG] Order Shipping Updated: Order ${order.orderNumber} | Courier: ${courier} | Waybill: ${trackingNumber}`);
 
     // Send shipment update notification
-    const user: any = await UserModel.findById(order.userId).lean();
+    const uId = order.userId && typeof order.userId === "object" && "_id" in order.userId
+      ? String((order.userId as any)._id)
+      : String(order.userId);
+
+    const user: any = order.userId && typeof order.userId === "object" && "_id" in order.userId
+      ? order.userId
+      : await UserModel.findById(uId).lean();
+
     if (user) {
       await notificationService.sendShipmentUpdate(
-        String(order.userId),
+        uId,
         user.email,
         order.orderNumber,
         "shipped",
@@ -262,18 +277,25 @@ export class OrderService {
     console.log(`[LOG] Order Payment Updated: Order ${order.orderNumber} | Status: ${paymentStatus}`);
 
     // Trigger Success / Refund Notifications
-    const user: any = await UserModel.findById(order.userId).lean();
+    const uId = order.userId && typeof order.userId === "object" && "_id" in order.userId
+      ? String((order.userId as any)._id)
+      : String(order.userId);
+
+    const user: any = order.userId && typeof order.userId === "object" && "_id" in order.userId
+      ? order.userId
+      : await UserModel.findById(uId).lean();
+
     if (user) {
       if (paymentStatus === "paid") {
         await notificationService.sendPaymentSuccess(
-          String(order.userId),
+          uId,
           user.email,
           order.paymentId || "PAYMENT",
           order.grandTotal
         );
       } else if (paymentStatus === "refunded") {
         await notificationService.sendRefund(
-          String(order.userId),
+          uId,
           user.email,
           order.orderNumber,
           order.grandTotal
@@ -297,7 +319,11 @@ export class OrderService {
     const order = await orderRepository.findById(id);
     if (!order) throw new NotFoundError("ORDER NOT FOUND");
 
-    if (!isAdmin && String(order.userId) !== userId) {
+    const uId = order.userId && typeof order.userId === "object" && "_id" in order.userId
+      ? String((order.userId as any)._id)
+      : String(order.userId);
+
+    if (!isAdmin && uId !== userId) {
       throw new BadRequestError("UNAUTHORIZED ACCESS TO THIS ORDER");
     }
 

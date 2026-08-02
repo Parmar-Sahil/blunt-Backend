@@ -3,6 +3,7 @@ import {
   placeOrder,
   getCustomerOrdersList,
   getCustomerOrderDetails,
+  cancelCustomerOrder,
 } from "../controllers/order.controller.js";
 import { authenticate } from "../middlewares/authenticate.js";
 
@@ -14,6 +15,7 @@ router.use(authenticate);
 router.post("/", placeOrder);
 router.get("/", getCustomerOrdersList);
 router.get("/:id", getCustomerOrderDetails);
+router.patch("/:id/cancel", cancelCustomerOrder);
 
 export default router;
 export { router as orderRoutes };

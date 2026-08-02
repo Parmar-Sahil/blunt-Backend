@@ -9,6 +9,7 @@ export const orderCreateSchema = z.object({
 
 export const orderStatusUpdateSchema = z.object({
   status: z.enum([
+    "placed",
     "pending",
     "confirmed",
     "packed",

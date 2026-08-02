@@ -44,9 +44,11 @@ app.use("/api/admin", adminRoutes);
 // Global Error Handler
 app.use(errorHandler);
 
-// Database connection & startup
-connectDatabase().then(() => {
-  app.listen(PORT, () => {
-    console.log(`[SERVER] CUSTOM EXPRESS AUTH SERVER RUNNING ON PORT ${PORT}`);
-  });
+// Start the server immediately
+app.listen(PORT, () => {
+  console.log(`[SERVER] CUSTOM EXPRESS AUTH SERVER RUNNING ON PORT ${PORT}`);
 });
+
+// Establish database connection in the background
+connectDatabase();
+

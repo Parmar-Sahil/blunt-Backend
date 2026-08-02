@@ -7,8 +7,8 @@ export class RazorpayProvider implements IPaymentProvider {
   private razorpay: any;
 
   constructor() {
-    const keyId = process.env.RAZORPAY_KEY_ID || "";
-    const keySecret = process.env.RAZORPAY_KEY_SECRET || "";
+    const keyId = process.env.RAZORPAY_KEY_ID || "rzp_test_dummykey";
+    const keySecret = process.env.RAZORPAY_KEY_SECRET || "dummysecret";
     this.razorpay = new (Razorpay as any)({
       key_id: keyId,
       key_secret: keySecret,

@@ -38,6 +38,7 @@ export interface IOrder extends Document {
   shippingAddress: IOrderAddress;
   billingAddress: IOrderAddress;
   status:
+    | "placed"
     | "pending"
     | "confirmed"
     | "packed"
@@ -98,6 +99,7 @@ const OrderSchema = new Schema<IOrder>(
     status: {
       type: String,
       enum: [
+        "placed",
         "pending",
         "confirmed",
         "packed",
@@ -108,7 +110,7 @@ const OrderSchema = new Schema<IOrder>(
         "returned",
         "refunded",
       ],
-      default: "pending",
+      default: "placed",
       index: true,
     },
     paymentStatus: {

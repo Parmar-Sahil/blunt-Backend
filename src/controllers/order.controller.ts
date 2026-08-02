@@ -164,3 +164,23 @@ export const adminUpdateNotes = asyncHandler(async (req: Request, res: Response)
 
   sendResponse(res, 200, true, "ORDER ADMIN NOTES UPDATED SUCCESSFULLY", order);
 });
+
+export const cancelCustomerOrder = asyncHandler(async (req: Request, res: Response) => {
+  const userId = (req as any).user?.userId;
+  if (!userId) {
+    throw new BadRequestError("AUTHENTICATION IS REQUIRED");
+  }
+
+  const { id } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new BadRequestError("INVALID ORDER OBJECTID");
+  }
+
+  const order = await orderService.getOrderById(id, userId, false);
+  if (order.status === "cancelled" || order.status === "shipped" || order.status === "delivered") {
+    throw new BadRequestError(`CANNOT CANCEL AN ORDER IN '${order.status.toUpperCase()}' STATE`);
+  }
+
+  const updatedOrder = await orderService.updateOrderStatus(id, "cancelled", userId);
+  sendResponse(res, 200, true, "ORDER CANCELLED SUCCESSFULLY", updatedOrder);
+});

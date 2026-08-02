@@ -47,7 +47,13 @@ export class CheckoutService {
 
     // 3. Validate products, variants, inventory, and prices
     for (const cartItem of cart.items) {
-      const product = await productRepository.findById(String(cartItem.productId));
+      let pId = String(cartItem.productId);
+      if (!pId || pId === "undefined" || pId.includes("{")) {
+        const match = pId.match(/([0-9a-fA-F]{24})/);
+        if (match) pId = match[1];
+      }
+
+      const product = await productRepository.findById(pId);
       if (!product || product.deletedAt || product.status !== "published") {
         throw new NotFoundError(`PRODUCT '${cartItem.variantId}' IS NO LONGER AVAILABLE.`);
       }
@@ -124,6 +130,8 @@ export class CheckoutService {
       shipping,
       tax,
       grandTotal,
+      shippingAddress,
+      billingAddress: billingAddress || shippingAddress,
       paymentGateway,
       status: "pending",
       expiresAt,
