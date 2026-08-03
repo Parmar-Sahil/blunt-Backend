@@ -12,6 +12,7 @@ import paymentRoutes from "./payment.routes.js";
 import uploadRoutes from "./upload.routes.js";
 import checkoutRoutes from "./checkout.routes.js";
 import notificationRoutes from "./notification.routes.js";
+import { returnRoutes, adminReturnRoutes } from "./return.routes.js";
 
 const router = Router();
 
@@ -28,5 +29,7 @@ router.use("/payments", paymentRoutes);
 router.use("/admin/upload", uploadRoutes);
 router.use("/checkout", checkoutRoutes);
 router.use("/notifications", notificationRoutes);
+router.use("/returns", returnRoutes);
+router.use("/admin/returns", adminReturnRoutes);
 
 export default router;

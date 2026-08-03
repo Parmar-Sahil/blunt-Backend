@@ -54,6 +54,11 @@ export interface IOrder extends Document {
   courier?: string | null;
   adminNotes?: string | null;
   customerNotes?: string | null;
+  deliveredAt?: Date | null;
+  returnEligibleUntil?: Date | null;
+  hasReturnRequest?: boolean;
+  returnStatus?: string | null;
+  canReturn?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -129,6 +134,11 @@ const OrderSchema = new Schema<IOrder>(
     courier: { type: String, default: null },
     adminNotes: { type: String, default: "" },
     customerNotes: { type: String, default: "" },
+    deliveredAt: { type: Date, default: null },
+    returnEligibleUntil: { type: Date, default: null },
+    hasReturnRequest: { type: Boolean, default: false },
+    returnStatus: { type: String, default: null },
+    canReturn: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

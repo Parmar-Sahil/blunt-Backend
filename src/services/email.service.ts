@@ -273,6 +273,77 @@ export class EmailService {
       `,
     });
   }
+
+  // --- RETURN & EXCHANGE TEMPLATES ---
+
+  getReturnRequestedHtml(orderNumber: string): string {
+    return getBrandedEmailLayout({
+      title: "RETURN REQUEST RECEIVED",
+      preheader: `Your return request for order ${orderNumber} is under review.`,
+      bodyHtml: `
+        <p>Hello,</p>
+        <p>We have received your return/exchange request for order <span class="highlight">${orderNumber}</span>.</p>
+        <p>Our quality assurance and fulfillment team is currently auditing your submission. You will receive an status update within 24-48 business hours.</p>
+      `,
+    });
+  }
+
+  getReturnApprovedHtml(orderNumber: string): string {
+    return getBrandedEmailLayout({
+      title: "RETURN REQUEST APPROVED",
+      preheader: `Your return request for order ${orderNumber} has been approved.`,
+      bodyHtml: `
+        <p>Hello,</p>
+        <p>Great news: your return request for order <span class="highlight">${orderNumber}</span> has been <span class="highlight" style="color: #BEF500;">APPROVED</span>.</p>
+        <p>Our logistics partner will contact you shortly to coordinate collection schedules. Please keep the items in their original packaging with tags intact.</p>
+      `,
+    });
+  }
+
+  getReturnRejectedHtml(orderNumber: string, reason: string): string {
+    return getBrandedEmailLayout({
+      title: "RETURN REQUEST REJECTED",
+      preheader: `Your return request for order ${orderNumber} was not approved.`,
+      bodyHtml: `
+        <p>Hello,</p>
+        <p>We regret to inform you that your return request for order <span class="highlight">${orderNumber}</span> has been declined.</p>
+        <p>Reason for rejection:</p>
+        <div style="padding: 16px; border: 1px solid #2B2B2B; background-color: #0E0E0E; color: #E5E2E1; font-family: monospace; font-size: 13px; margin: 16px 0;">
+          ${reason}
+        </div>
+        <p>If you believe this audit was processed in error, please contact our support desk.</p>
+      `,
+    });
+  }
+
+  getReturnPickupScheduledHtml(orderNumber: string, date: string): string {
+    return getBrandedEmailLayout({
+      title: "PICKUP SCHEDULED",
+      preheader: `Pickup scheduled for order ${orderNumber}.`,
+      bodyHtml: `
+        <p>Hello,</p>
+        <p>A return package collection run has been scheduled for order <span class="highlight">${orderNumber}</span>.</p>
+        <p>Estimated pickup dispatch slot:</p>
+        <div style="font-size: 20px; font-weight: bold; text-align: center; color: #BEF500; border: 1px solid #2B2B2B; background-color: #0E0E0E; padding: 20px; margin: 16px 0; text-transform: uppercase; letter-spacing: 0.05em;">
+          ${date}
+        </div>
+        <p>Please ensure all products, packaging boxes, and tags are handed over to the courier representative.</p>
+      `,
+    });
+  }
+
+  getRefundCompletedHtml(orderNumber: string, amount: number): string {
+    return getBrandedEmailLayout({
+      title: "REFUND COMPLETED",
+      preheader: `Refund issued for order ${orderNumber}.`,
+      bodyHtml: `
+        <p>Hello,</p>
+        <p>We have processed your refund for order <span class="highlight">${orderNumber}</span>.</p>
+        <p>A total amount of <span class="highlight" style="color: #BEF500;">$${amount.toFixed(2)}</span> has been credited back to your original payment gateway account.</p>
+        <p>Depending on your banking institution, funds should reflect in your statement within 5-10 business days.</p>
+      `,
+    });
+  }
 }
 
 export const emailService = new EmailService();

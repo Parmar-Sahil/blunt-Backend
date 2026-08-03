@@ -160,6 +160,9 @@ export class OrderService {
       order.shippingStatus = "out-for-delivery";
     } else if (status === "delivered") {
       order.shippingStatus = "delivered";
+      order.deliveredAt = new Date();
+      order.returnEligibleUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      order.canReturn = true;
     } else if (status === "cancelled") {
       if (currentStatus === "pending" || currentStatus === "confirmed") {
         for (const item of order.items) {

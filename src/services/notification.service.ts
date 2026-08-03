@@ -275,6 +275,61 @@ export class NotificationService {
       content,
     });
   }
+
+  async sendReturnRequested(userId: string, email: string, orderNumber: string): Promise<void> {
+    const content = emailService.getReturnRequestedHtml(orderNumber);
+    await this.dispatchEmail({
+      userId,
+      type: "return-requested",
+      recipient: email,
+      subject: `RETURN REQUEST RECEIVED FOR ORDER ${orderNumber}`,
+      content,
+    });
+  }
+
+  async sendReturnApproved(userId: string, email: string, orderNumber: string): Promise<void> {
+    const content = emailService.getReturnApprovedHtml(orderNumber);
+    await this.dispatchEmail({
+      userId,
+      type: "return-approved",
+      recipient: email,
+      subject: `RETURN APPROVED FOR ORDER ${orderNumber}`,
+      content,
+    });
+  }
+
+  async sendReturnRejected(userId: string, email: string, orderNumber: string, reason: string): Promise<void> {
+    const content = emailService.getReturnRejectedHtml(orderNumber, reason);
+    await this.dispatchEmail({
+      userId,
+      type: "return-rejected",
+      recipient: email,
+      subject: `RETURN REJECTED FOR ORDER ${orderNumber}`,
+      content,
+    });
+  }
+
+  async sendReturnPickupScheduled(userId: string, email: string, orderNumber: string, date: string): Promise<void> {
+    const content = emailService.getReturnPickupScheduledHtml(orderNumber, date);
+    await this.dispatchEmail({
+      userId,
+      type: "return-pickup-scheduled",
+      recipient: email,
+      subject: `RETURN PICKUP SCHEDULED FOR ORDER ${orderNumber}`,
+      content,
+    });
+  }
+
+  async sendRefundCompleted(userId: string, email: string, orderNumber: string, amount: number): Promise<void> {
+    const content = emailService.getRefundCompletedHtml(orderNumber, amount);
+    await this.dispatchEmail({
+      userId,
+      type: "refund-completed",
+      recipient: email,
+      subject: `REFUND COMPLETED FOR ORDER ${orderNumber}`,
+      content,
+    });
+  }
 }
 
 export const notificationService = new NotificationService();
