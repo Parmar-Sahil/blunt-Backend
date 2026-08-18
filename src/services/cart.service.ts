@@ -42,8 +42,8 @@ export class CartService {
 
       const product = await productRepository.findById(pId);
       if (product) {
-        const variant = product.variants.find((v: any) => v.sku === item.variantId);
-        const price = variant?.priceOverride || product.price;
+        const variant = product.variants.find((v: any) => v.sku === item.variantId || String(v._id) === item.variantId);
+        const price = variant?.priceOverride != null ? variant.priceOverride : product.price;
         item.unitPrice = price;
         item.subtotal = price * item.quantity;
         subtotal += item.subtotal;
@@ -85,7 +85,7 @@ export class CartService {
       throw new NotFoundError("PRODUCT NOT FOUND OR UNPUBLISHED");
     }
 
-    const variant = product.variants.find((v: any) => v.sku === variantId);
+    const variant = product.variants.find((v: any) => v.sku === variantId || String(v._id) === variantId);
     if (!variant) {
       throw new NotFoundError(`PRODUCT VARIANT '${variantId}' NOT FOUND`);
     }
@@ -94,9 +94,10 @@ export class CartService {
     const existingItem = cart.items.find((i) => i.variantId === variantId);
     const targetQuantity = (existingItem?.quantity || 0) + quantity;
 
-    if (variant.availableStock < targetQuantity) {
-      throw new BadRequestError(`INSUFFICIENT STOCK. ONLY ${variant.availableStock} UNITS AVAILABLE.`);
-    }
+    // Allow adding to cart regardless of stock limit; alerts are handled on order placement
+    // if (variant.availableStock < targetQuantity) {
+    //   throw new BadRequestError(`INSUFFICIENT STOCK. ONLY ${variant.availableStock} UNITS AVAILABLE.`);
+    // }
 
     if (existingItem) {
       existingItem.quantity = targetQuantity;
@@ -105,8 +106,8 @@ export class CartService {
         productId,
         variantId,
         quantity,
-        unitPrice: variant.priceOverride || product.price,
-        subtotal: (variant.priceOverride || product.price) * quantity,
+        unitPrice: variant.priceOverride != null ? variant.priceOverride : product.price,
+        subtotal: (variant.priceOverride != null ? variant.priceOverride : product.price) * quantity,
       });
     }
 
@@ -131,7 +132,7 @@ export class CartService {
     const product = await productRepository.findById(String(item.productId));
     if (!product) throw new NotFoundError("PRODUCT NOT FOUND");
 
-    const variant = product.variants.find((v: any) => v.sku === variantId);
+    const variant = product.variants.find((v: any) => v.sku === variantId || String(v._id) === variantId);
     if (!variant) throw new NotFoundError("PRODUCT VARIANT NOT FOUND");
 
     if (variant.availableStock < quantity) {

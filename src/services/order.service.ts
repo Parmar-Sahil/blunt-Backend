@@ -9,6 +9,7 @@ import UserModel from "../models/user.model.js";
 import notificationService from "./notification.service.js";
 import { NotFoundError, BadRequestError } from "../utils/errors.js";
 import { IOrder } from "../models/order.model.js";
+import ReturnRequest from "../models/returnRequest.model.js";
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
   pending: ["confirmed", "cancelled"],
@@ -54,6 +55,7 @@ export class OrderService {
     }
 
     const orderNumber = await this.generateUniqueOrderNumber();
+    const stockWarnings: string[] = [];
     const orderItemsSnapshot: any[] = [];
 
     // 2. Confirm stock reductions and build order items snapshot
@@ -69,6 +71,11 @@ export class OrderService {
 
       const variant = product.variants.find((v: any) => v.sku === item.variantId);
       if (!variant) throw new NotFoundError("PRODUCT VARIANT NOT FOUND");
+
+      // Check for stock warning before deducting
+      if (variant.stock < item.quantity) {
+        stockWarnings.push(`INSUFFICIENT STOCK: SKU ${variant.sku} (${product.name} - ${variant.color}/${variant.size}). Ordered: ${item.quantity}, Available: ${variant.stock}`);
+      }
 
       // Deduct inventory
       await inventoryService.confirmOrderStockReduction(pId, item.variantId, item.quantity);
@@ -101,6 +108,10 @@ export class OrderService {
 
     const sessionObj = checkoutSession.toObject();
 
+    const initialAdminNotes = stockWarnings.length > 0
+      ? `[SYSTEM WARNING: ${stockWarnings.join(" | ")}]\n`
+      : "";
+
     const order = await orderRepository.create({
       orderNumber,
       userId,
@@ -120,7 +131,7 @@ export class OrderService {
       paymentStatus,
       shippingStatus: "pending",
       customerNotes,
-      adminNotes: "",
+      adminNotes: initialAdminNotes,
     });
 
     // 4. Clear Customer's Cart
@@ -318,7 +329,7 @@ export class OrderService {
     return order;
   }
 
-  async getOrderById(id: string, userId: string, isAdmin: boolean = false): Promise<IOrder> {
+  async getOrderById(id: string, userId: string, isAdmin: boolean = false): Promise<any> {
     const order = await orderRepository.findById(id);
     if (!order) throw new NotFoundError("ORDER NOT FOUND");
 
@@ -330,7 +341,16 @@ export class OrderService {
       throw new BadRequestError("UNAUTHORIZED ACCESS TO THIS ORDER");
     }
 
-    return order;
+    const orderObj = order.toObject ? order.toObject() : order;
+
+    if (order.hasReturnRequest) {
+      const returnRequest = await ReturnRequest.findOne({ orderId: id }).lean();
+      if (returnRequest) {
+        orderObj.returnRequest = returnRequest;
+      }
+    }
+
+    return orderObj;
   }
 
   async getCustomerOrders(userId: string, page: number, limit: number, status?: string) {

@@ -4,13 +4,13 @@ import sendResponse from "../utils/responseBuilder.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
 export const getAddresses = asyncHandler(async (req: Request, res: Response) => {
-  const userId = (req as any).user?.id;
+  const userId = req.user?.userId || (req as any).user?.id;
   const list = await addressService.listUserAddresses(userId);
   sendResponse(res, 200, true, "ADDRESSES RETRIEVED SUCCESSFULLY", list);
 });
 
 export const createAddress = asyncHandler(async (req: Request, res: Response) => {
-  const userId = (req as any).user?.id;
+  const userId = req.user?.userId || (req as any).user?.id;
   const address = await addressService.createAddress({ ...req.body, user: userId });
   sendResponse(res, 201, true, "ADDRESS CREATED SUCCESSFULLY", address);
 });

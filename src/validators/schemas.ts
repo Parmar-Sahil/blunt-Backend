@@ -25,7 +25,7 @@ export const collectionValidationSchema = z.object({
 });
 
 export const addressValidationSchema = z.object({
-  type: z.enum(["Default", "Billing", "Shipping"]).default("Shipping"),
+  type: z.enum(["Home", "Work", "Other", "Default", "Billing", "Shipping"]).default("Home"),
   street: z.string().min(1, "Street address is required"),
   city: z.string().min(1, "City is required"),
   state: z.string().min(1, "State is required"),

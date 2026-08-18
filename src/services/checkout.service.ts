@@ -58,16 +58,17 @@ export class CheckoutService {
         throw new NotFoundError(`PRODUCT '${cartItem.variantId}' IS NO LONGER AVAILABLE.`);
       }
 
-      const variant = product.variants.find((v: any) => v.sku === cartItem.variantId);
+      const variant = product.variants.find((v: any) => v.sku === cartItem.variantId || String(v._id) === cartItem.variantId);
       if (!variant || variant.status !== "active") {
         throw new NotFoundError(`PRODUCT VARIANT '${cartItem.variantId}' IS NOT ACTIVE.`);
       }
 
-      if (variant.availableStock < cartItem.quantity) {
-        throw new BadRequestError(
-          `INSUFFICIENT STOCK FOR '${product.name} - ${variant.size}/${variant.color}'. AVAILABLE: ${variant.availableStock}.`
-        );
-      }
+      // Allow checkout to proceed even if stock is insufficient; system warnings will be recorded for admin.
+      // if (variant.availableStock < cartItem.quantity) {
+      //   throw new BadRequestError(
+      //     `INSUFFICIENT STOCK FOR '${product.name} - ${variant.size}/${variant.color}'. AVAILABLE: ${variant.availableStock}.`
+      //   );
+      // }
 
       const catalogPrice = variant.priceOverride !== null && variant.priceOverride !== undefined
         ? variant.priceOverride

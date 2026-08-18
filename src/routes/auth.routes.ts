@@ -57,5 +57,9 @@ router.post("/logout", (req, res, next) => authController.logout(req, res, next)
 
 // Authenticated user profile context
 router.get("/me", authenticate, (req, res, next) => authController.me(req, res, next));
+router.patch("/profile", authenticate, (req, res, next) => authController.updateProfile(req, res, next));
+router.get("/stats", authenticate, (req, res, next) => authController.getStats(req, res, next));
+router.delete("/me", authenticate, (req, res, next) => authController.deleteAccount(req, res, next));
 
 export default router;
+

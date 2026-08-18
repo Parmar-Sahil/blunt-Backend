@@ -3,6 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
+import mongoose from "mongoose";
 import { connectDatabase } from "./database/connection.js";
 import securityConfig from "./config/security.config.js";
 import requestLogger from "./middlewares/requestLogger.js";
@@ -22,6 +23,7 @@ app.use(helmet());
 app.use(cors(securityConfig.cors));
 app.use(
   express.json({
+    limit: "10mb",
     verify: (req: any, res, buf) => {
       req.rawBody = buf;
     },
@@ -33,22 +35,46 @@ app.use(cookieParser());
 // Request tracer logging
 app.use(requestLogger);
 
-// Mount versioned V1 routes
-app.use("/api/v1", v1Routes);
-
-// Fallback legacy support for auth and admin routes if any front-end relies on them directly
-// TODO: Migrate all frontend assets to /api/v1/* versioned endpoints
+// Mount auth/admin routes BEFORE the DB guard so token refresh always works
+// even while MongoDB is still connecting on startup
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
+
+// DB readiness guard — return 503 for all data routes until MongoDB is connected
+// Auth routes above are exempt so the frontend can still refresh tokens during startup
+app.use((req: any, res: any, next: any) => {
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({
+      success: false,
+      message: "DATABASE CONNECTION NOT READY. PLEASE RETRY IN A MOMENT.",
+      data: null,
+      error: "ServiceUnavailable",
+    });
+  }
+  next();
+});
+
+// Mount versioned V1 routes
+app.use("/api/v1", v1Routes);
 
 // Global Error Handler
 app.use(errorHandler);
 
-// Start the server immediately
+// Start server immediately so process stays alive, but hold DB connection with retry
 app.listen(PORT, () => {
   console.log(`[SERVER] CUSTOM EXPRESS AUTH SERVER RUNNING ON PORT ${PORT}`);
 });
 
-// Establish database connection in the background
-connectDatabase();
+// Establish database connection with retry logic
+const connectWithRetry = async (attempt = 1): Promise<void> => {
+  try {
+    await connectDatabase();
+  } catch (err: any) {
+    const delay = Math.min(5000 * attempt, 30000);
+    console.error(`[SERVER] DB CONNECTION ATTEMPT ${attempt} FAILED. RETRYING IN ${delay / 1000}s...`);
+    setTimeout(() => connectWithRetry(attempt + 1), delay);
+  }
+};
+
+connectWithRetry();
 

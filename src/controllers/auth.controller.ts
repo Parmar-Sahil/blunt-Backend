@@ -17,6 +17,8 @@ import {
 } from "../validators/auth.schema.js";
 import { BadRequestError, UnauthorizedError, NotFoundError } from "../utils/errors.js";
 import mongoose from "mongoose";
+import Order from "../models/order.model.js";
+import ReturnRequest from "../models/returnRequest.model.js";
 
 const COOKIE_NAME = "refreshToken";
 const BCRYPT_SALT_ROUNDS = parseInt(process.env.BCRYPT_SALT_ROUNDS || "12", 10);
@@ -649,7 +651,131 @@ export class AuthController {
       next(e);
     }
   }
+
+  /**
+   * Update customer profile details (name, phone, avatar)
+   * PATCH /api/auth/profile
+   */
+  async updateProfile(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.user) {
+        throw new UnauthorizedError("AUTHENTICATION IS REQUIRED");
+      }
+
+      const { name, phone, avatar } = req.body;
+      const user = await userRepository.findById(req.user.userId);
+      if (!user) {
+        throw new NotFoundError("USER NOT FOUND");
+      }
+
+      if (name !== undefined) user.name = name;
+      if (phone !== undefined) user.phone = phone;
+      if (avatar !== undefined) user.avatar = avatar;
+
+      await user.save();
+
+      res.status(200).json({
+        success: true,
+        message: "PROFILE UPDATED SUCCESSFULLY",
+        data: {
+          user: {
+            id: user._id,
+            email: user.email,
+            name: user.name,
+            avatar: user.avatar,
+            role: user.role,
+            phone: user.phone,
+            addresses: user.addresses,
+            wishlist: user.wishlist,
+            cart: user.cart,
+          },
+        },
+        error: null,
+      });
+    } catch (e: any) {
+      next(e);
+    }
+  }
+
+  /**
+   * Get authenticated customer summary statistics
+   * GET /api/auth/stats
+   */
+  async getStats(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.user) {
+        throw new UnauthorizedError("AUTHENTICATION IS REQUIRED");
+      }
+
+      const userId = req.user.userId;
+      const user = await userRepository.findById(userId);
+      if (!user) {
+        throw new NotFoundError("USER NOT FOUND");
+      }
+
+      // Count orders and total spent
+      const userOrders = await Order.find({ userId, status: { $ne: "cancelled" } });
+      const totalOrders = await Order.countDocuments({ userId });
+      const totalSpent = userOrders.reduce((sum, order) => sum + (order.grandTotal || 0), 0);
+
+      // Count active return requests
+      const activeReturns = await ReturnRequest.countDocuments({
+        userId,
+        status: { $in: ["requested", "approved", "pickupScheduled", "pickedUp", "received"] },
+      });
+
+      const wishlistCount = Array.isArray(user.wishlist) ? user.wishlist.length : 0;
+
+      res.status(200).json({
+        success: true,
+        message: "USER STATISTICS RETRIEVED",
+        data: {
+          totalOrders,
+          totalSpent,
+          activeReturns,
+          wishlistItems: wishlistCount,
+        },
+        error: null,
+      });
+    } catch (e: any) {
+      next(e);
+    }
+  }
+
+  /**
+   * Permanently delete customer user account
+   * DELETE /api/auth/me
+   */
+  async deleteAccount(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.user) {
+        throw new UnauthorizedError("AUTHENTICATION IS REQUIRED");
+      }
+
+      const userId = req.user.userId;
+      const user = await userRepository.findById(userId);
+      if (!user) {
+        throw new NotFoundError("USER NOT FOUND");
+      }
+
+      // Remove user record
+      await user.deleteOne();
+
+      // Clear auth cookies
+      res.clearCookie(COOKIE_NAME);
+
+      res.status(200).json({
+        success: true,
+        message: "ACCOUNT DELETED PERMANENTLY",
+        data: null,
+        error: null,
+      });
+    } catch (e: any) {
+      next(e);
+    }
+  }
 }
 
 export const authController = new AuthController();
 export default authController;
+

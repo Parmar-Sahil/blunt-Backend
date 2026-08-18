@@ -9,9 +9,9 @@ export class InventoryService {
     const variant = product.variants.find((v: any) => v.sku === variantId);
     if (!variant) throw new NotFoundError(`VARIANT '${variantId}' NOT FOUND`);
 
-    if (variant.availableStock < quantity) {
-      throw new BadRequestError(`INSUFFICIENT INVENTORY FOR SKU '${variantId}'`);
-    }
+    // if (variant.availableStock < quantity) {
+    //   throw new BadRequestError(`INSUFFICIENT INVENTORY FOR SKU '${variantId}'`);
+    // }
 
     variant.reservedStock += quantity;
     variant.availableStock = variant.stock - variant.reservedStock;
@@ -41,9 +41,9 @@ export class InventoryService {
     const variant = product.variants.find((v: any) => v.sku === variantId);
     if (!variant) throw new NotFoundError(`VARIANT '${variantId}' NOT FOUND`);
 
-    if (variant.stock < quantity) {
-      throw new BadRequestError(`INSUFFICIENT STOCK FOR SKU '${variantId}'`);
-    }
+    // if (variant.stock < quantity) {
+    //   throw new BadRequestError(`INSUFFICIENT STOCK FOR SKU '${variantId}'`);
+    // }
 
     variant.stock -= quantity;
     variant.availableStock = variant.stock - variant.reservedStock;
@@ -60,9 +60,9 @@ export class InventoryService {
     const variant = product.variants.find((v: any) => v.sku === variantId);
     if (!variant) throw new NotFoundError(`VARIANT '${variantId}' NOT FOUND`);
 
-    if (variant.stock < quantity) {
-      throw new BadRequestError(`INSUFFICIENT STOCK FOR SKU '${variantId}'`);
-    }
+    // if (variant.stock < quantity) {
+    //   throw new BadRequestError(`INSUFFICIENT STOCK FOR SKU '${variantId}'`);
+    // }
 
     // Deduct stock, and release the reservation (as it is now a completed purchase)
     variant.stock -= quantity;

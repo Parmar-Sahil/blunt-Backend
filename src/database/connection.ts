@@ -10,9 +10,9 @@ try {
   logger.warn("[DNS] FAILED TO CONFIGURE PUBLIC DNS RESOLVERS", err);
 }
 
-
 import Category from "../models/category.model.js";
 import Collection from "../models/collection.model.js";
+import Product from "../models/product.model.js";
 
 const slugify = (text: string) => {
   return text
@@ -25,33 +25,82 @@ const slugify = (text: string) => {
     .replace(/-+$/, "");
 };
 
+const BLUNT_PRODUCT_TYPES = [
+  "Oversized T-Shirt",
+  "Boxy T-Shirt",
+  "Regular Fit T-Shirt",
+  "Heavyweight T-Shirt",
+  "Graphic T-Shirt",
+  "Minimal T-Shirt",
+  "Drop Shoulder T-Shirt",
+  "Longline T-Shirt",
+];
+
+const BLUNT_COLLECTIONS = [
+  "Essentials",
+  "Obsidian",
+  "Midnight Drop",
+  "Core Collection",
+  "New Era",
+  "Archive",
+  "Limited Drop",
+];
+
 const seedDefaultData = async () => {
   try {
-    const categoryCount = await Category.countDocuments();
-    if (categoryCount === 0) {
-      const defaultCategories = ["Outerwear", "Hard Shell", "Soft Goods", "Hardware", "Accessories"];
-      for (const name of defaultCategories) {
+    // 1. Ensure all BLUNT T-Shirt Product Types (Categories) exist
+    for (const name of BLUNT_PRODUCT_TYPES) {
+      const slug = slugify(name);
+      const existing = await Category.findOne({ name });
+      if (!existing) {
         await Category.create({
           name,
-          slug: slugify(name),
+          slug,
           status: "active",
         });
+        logger.info(`[DB] CREATED PRODUCT TYPE: ${name}`);
       }
-      logger.info("[DB] SEEDED DEFAULT CATEGORIES SUCCESSFULLY");
     }
 
-    const collectionCount = await Collection.countDocuments();
-    if (collectionCount === 0) {
-      const defaultCollections = ["Winter '24", "Summer Apex", "Obsidian Core", "Pre-Release Drop"];
-      for (const name of defaultCollections) {
+    // 2. Ensure all BLUNT Collections exist
+    for (const name of BLUNT_COLLECTIONS) {
+      const slug = slugify(name);
+      const existing = await Collection.findOne({ name });
+      if (!existing) {
         await Collection.create({
           name,
-          slug: slugify(name),
+          slug,
           status: "active",
         });
+        logger.info(`[DB] CREATED COLLECTION: ${name}`);
       }
-      logger.info("[DB] SEEDED DEFAULT COLLECTIONS SUCCESSFULLY");
     }
+
+    // 3. Migration: Handle any legacy generic categories ("Outerwear", "Hard Shell", etc.)
+    const defaultProductType = await Category.findOne({ name: "Oversized T-Shirt" });
+    if (defaultProductType) {
+      const legacyCategories = await Category.find({
+        name: { $in: ["Outerwear", "Hard Shell", "Soft Goods", "Hardware", "Accessories"] },
+      });
+
+      for (const legacyCat of legacyCategories) {
+        // Re-assign products referencing legacy category to default "Oversized T-Shirt"
+        const updateResult = await Product.updateMany(
+          { categoryId: legacyCat._id },
+          { $set: { categoryId: defaultProductType._id } }
+        );
+        if (updateResult.modifiedCount > 0) {
+          logger.info(
+            `[DB] MIGRATED ${updateResult.modifiedCount} PRODUCTS FROM LEGACY CATEGORY '${legacyCat.name}' TO 'Oversized T-Shirt'`
+          );
+        }
+        // Remove old generic category
+        await Category.findByIdAndDelete(legacyCat._id);
+        logger.info(`[DB] REMOVED LEGACY GENERIC CATEGORY '${legacyCat.name}'`);
+      }
+    }
+
+    logger.info("[DB] BLUNT T-SHIRT TAXONOMY & DATA SYNC COMPLETED SUCCESSFULLY");
   } catch (err) {
     logger.error("[DB] SEEDING ERROR", err);
   }
