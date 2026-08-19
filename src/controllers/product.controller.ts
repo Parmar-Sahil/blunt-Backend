@@ -5,6 +5,7 @@ import sendResponse from "../utils/responseBuilder.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import mongoose from "mongoose";
 import { BadRequestError } from "../utils/errors.js";
+import { toPublicProductDto, toPublicPaginatedProductsDto } from "../dtos/product.dto.js";
 
 export const getProducts = asyncHandler(async (req: Request, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
@@ -44,7 +45,8 @@ export const getProducts = asyncHandler(async (req: Request, res: Response) => {
     fields,
   });
 
-  sendResponse(res, 200, true, "PRODUCTS RETRIEVED SUCCESSFULLY", result);
+  const publicResult = toPublicPaginatedProductsDto(result);
+  sendResponse(res, 200, true, "PRODUCTS RETRIEVED SUCCESSFULLY", publicResult);
 });
 
 export const getProductById = asyncHandler(async (req: Request, res: Response) => {
@@ -54,12 +56,12 @@ export const getProductById = asyncHandler(async (req: Request, res: Response) =
   }
 
   const product = await productService.getProductById(id);
-  sendResponse(res, 200, true, "PRODUCT RETRIEVED SUCCESSFULLY", product);
+  sendResponse(res, 200, true, "PRODUCT RETRIEVED SUCCESSFULLY", toPublicProductDto(product));
 });
 
 export const getProductBySlug = asyncHandler(async (req: Request, res: Response) => {
   const product = await productService.getProductBySlug(req.params.slug);
-  sendResponse(res, 200, true, "PRODUCT RETRIEVED SUCCESSFULLY", product);
+  sendResponse(res, 200, true, "PRODUCT RETRIEVED SUCCESSFULLY", toPublicProductDto(product));
 });
 
 export const createProduct = asyncHandler(async (req: Request, res: Response) => {
