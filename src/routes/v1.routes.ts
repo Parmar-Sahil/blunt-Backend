@@ -12,6 +12,7 @@ import paymentRoutes from "./payment.routes.js";
 import uploadRoutes from "./upload.routes.js";
 import checkoutRoutes from "./checkout.routes.js";
 import notificationRoutes from "./notification.routes.js";
+import dropRoutes from "./drop.routes.js";
 import { returnRoutes, adminReturnRoutes } from "./return.routes.js";
 
 const router = Router();
@@ -19,6 +20,7 @@ const router = Router();
 router.use("/auth", authRoutes);
 router.use("/admin", adminRoutes);
 router.use("/products", productRoutes);
+router.use("/drops", dropRoutes);
 router.use("/categories", categoryRoutes);
 router.use("/collections", collectionRoutes);
 router.use("/orders", orderRoutes);
