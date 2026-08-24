@@ -11,6 +11,10 @@ export class OrderRepository {
     return Order.findOne({ orderNumber }).populate("userId");
   }
 
+  async findByCheckoutId(checkoutId: string): Promise<IOrder | null> {
+    return Order.findOne({ checkoutId }).populate("userId");
+  }
+
   async create(data: Partial<IOrder>): Promise<IOrder> {
     const item = new Order(data);
     return item.save();
@@ -30,8 +34,12 @@ export class OrderRepository {
     limit: number;
     status?: string;
   }) {
-    const query: Record<string, any> = { userId: new mongoose.Types.ObjectId(options.userId) };
-    if (options.status) {
+    const userFilter = mongoose.Types.ObjectId.isValid(options.userId)
+      ? { $in: [options.userId, new mongoose.Types.ObjectId(options.userId)] }
+      : options.userId;
+
+    const query: Record<string, any> = { userId: userFilter };
+    if (options.status && options.status !== "all") {
       query.status = options.status;
     }
 

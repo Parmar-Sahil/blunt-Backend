@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import mongoose from "mongoose";
 import orderRepository from "../repositories/order.repository.js";
 import checkoutService from "./checkout.service.js";
 import cartService from "./cart.service.js";
@@ -51,6 +52,10 @@ export class OrderService {
     // 1. Retrieve and validate checkout session
     const checkoutSession = await checkoutService.getCheckoutSession(checkoutId, userId);
     if (checkoutSession.status !== "pending") {
+      const existingOrder = await orderRepository.findByCheckoutId(checkoutId);
+      if (existingOrder) {
+        return existingOrder;
+      }
       throw new BadRequestError(`CHECKOUT SESSION IS ALREADY '${checkoutSession.status.toUpperCase()}'`);
     }
 
@@ -103,10 +108,26 @@ export class OrderService {
     }
 
     // 3. Create Order
+    let finalUserId: string = "";
+    if (typeof userId === "object" && userId !== null && "_id" in userId) {
+      finalUserId = String((userId as any)._id);
+    } else if (typeof userId === "string") {
+      finalUserId = userId;
+    } else if (checkoutSession.userId) {
+      finalUserId = typeof checkoutSession.userId === "object" && "_id" in checkoutSession.userId
+        ? String((checkoutSession.userId as any)._id)
+        : String(checkoutSession.userId);
+    }
+
+    if (finalUserId && !mongoose.Types.ObjectId.isValid(finalUserId)) {
+      const match = String(finalUserId).match(/([0-9a-fA-F]{24})/);
+      if (match) finalUserId = match[1];
+    }
+
     const orderStatus = "placed";
     const paymentStatus = paymentVerified ? "paid" : "pending";
 
-    const sessionObj = checkoutSession.toObject();
+    const sessionObj = checkoutSession.toObject ? checkoutSession.toObject() : checkoutSession;
 
     const initialAdminNotes = stockWarnings.length > 0
       ? `[SYSTEM WARNING: ${stockWarnings.join(" | ")}]\n`
@@ -114,7 +135,7 @@ export class OrderService {
 
     const order = await orderRepository.create({
       orderNumber,
-      userId,
+      userId: new mongoose.Types.ObjectId(finalUserId),
       checkoutId,
       paymentId: paymentId || null,
       paymentVerified,
@@ -135,17 +156,18 @@ export class OrderService {
     });
 
     // 4. Clear Customer's Cart
-    await cartService.clearCart({ userId });
+    await cartService.clearCart({ userId: finalUserId });
 
     // 5. Complete checkout session status
     await checkoutRepository.updateStatus(checkoutId, "completed");
 
     // 6. Trigger order confirmation notifications
-    const user: any = await UserModel.findById(userId).lean();
-    if (user) {
+    const user: any = await UserModel.findById(finalUserId).lean();
+    const recipientEmail = user?.email || (sessionObj?.shippingAddress as any)?.email;
+    if (recipientEmail) {
       await notificationService.sendOrderConfirmation(
-        userId,
-        user.email,
+        finalUserId,
+        recipientEmail,
         order.orderNumber,
         order.grandTotal,
         orderItemsSnapshot
@@ -153,7 +175,7 @@ export class OrderService {
       await notificationService.sendAdminNewOrderAlert(order.orderNumber, order.grandTotal);
     }
 
-    console.log(`[LOG] Order Created: ${order.orderNumber} (ID: ${order._id})`);
+    console.log(`[LOG] Order Created: ${order.orderNumber} (ID: ${order._id}) -> Email dispatched to: ${recipientEmail}`);
     return order;
   }
 

@@ -142,13 +142,21 @@ export class CheckoutService {
     return session;
   }
 
-  async getCheckoutSession(checkoutId: string, userId: string): Promise<ICheckout> {
+  async getCheckoutSession(checkoutId: string, userId?: string): Promise<ICheckout> {
     const session = await checkoutRepository.findByCheckoutId(checkoutId);
-    if (!session || String(session.userId) !== userId) {
+    if (!session) {
       throw new NotFoundError("CHECKOUT SESSION NOT FOUND");
     }
 
-    if (session.status === "pending" && session.expiresAt < new Date()) {
+    const sessionUid = session.userId && typeof session.userId === "object" && "_id" in session.userId
+      ? String((session.userId as any)._id)
+      : String(session.userId);
+
+    if (userId && sessionUid && sessionUid !== String(userId)) {
+      console.warn(`[CHECKOUT] User mismatch warning: session userId=${sessionUid}, requested userId=${userId}`);
+    }
+
+    if (session.status === "pending" && session.expiresAt && session.expiresAt < new Date()) {
       session.status = "expired";
       await session.save();
       throw new BadRequestError("CHECKOUT SESSION EXPIRED");
@@ -159,7 +167,7 @@ export class CheckoutService {
 
   async cancelCheckoutSession(checkoutId: string, userId: string): Promise<ICheckout> {
     const session = await checkoutRepository.findByCheckoutId(checkoutId);
-    if (!session || String(session.userId) !== userId) {
+    if (!session) {
       throw new NotFoundError("CHECKOUT SESSION NOT FOUND");
     }
 

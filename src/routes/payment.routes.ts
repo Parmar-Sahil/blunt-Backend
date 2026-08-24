@@ -16,6 +16,7 @@ router.post("/webhooks/stripe", stripeWebhook);
 router.post("/webhooks/razorpay", razorpayWebhook);
 
 // Customer protected endpoints
+router.post("/session", authenticate, initiatePayment);
 router.post("/create", authenticate, initiatePayment);
 router.post("/verify", authenticate, verifyPaymentEndpoint);
 router.post("/refund", authenticate, processRefundPlaceholder);

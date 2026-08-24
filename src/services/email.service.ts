@@ -102,28 +102,42 @@ export class EmailService {
     const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
     let itemsListHtml = "";
     for (const item of items) {
+      const imgTag = item.productImage
+        ? `<img src="${item.productImage}" alt="${item.productName}" style="width: 52px; height: 52px; object-fit: cover; border: 1px solid #2B2B2B; margin-right: 12px; vertical-align: middle;" />`
+        : "";
+
       itemsListHtml += `
-        <tr style="border-bottom: 1px solid #1F1F1F;">
-          <td style="padding: 12px 0;">
-            <div style="font-weight: 700; color: #FFFFFF;">${item.productName || "Product"}</div>
-            <div style="font-size: 13px; color: #8E8E93;">Size: ${item.size} | Color: ${item.color}</div>
+        <tr style="border-bottom: 1px solid #1C1C1C;">
+          <td style="padding: 16px 0; font-family: 'Courier New', Courier, monospace, sans-serif;">
+            <table style="border-collapse: collapse;">
+              <tr>
+                ${imgTag ? `<td style="padding-right: 12px; vertical-align: middle;">${imgTag}</td>` : ""}
+                <td style="vertical-align: middle;">
+                  <div style="font-weight: 900; color: #FFFFFF; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em;">${item.productName || "PRODUCT"}</div>
+                  <div style="font-size: 11px; color: #BEF500; margin-top: 4px; letter-spacing: 0.1em; text-transform: uppercase;">SIZE: ${item.size || "M"} • COLOR: ${item.color || "BLACK"}</div>
+                </td>
+              </tr>
+            </table>
           </td>
-          <td style="padding: 12px 0; text-align: center; color: #D1D1D6;">x${item.quantity}</td>
-          <td style="padding: 12px 0; text-align: right; color: #FFFFFF;">INR ${item.subtotal.toFixed(2)}</td>
+          <td style="padding: 16px 0; text-align: center; color: #FFFFFF; font-family: 'Courier New', Courier, monospace, sans-serif; font-weight: bold; font-size: 13px;">x${item.quantity}</td>
+          <td style="padding: 16px 0; text-align: right; color: #BEF500; font-family: 'Courier New', Courier, monospace, sans-serif; font-weight: 900; font-size: 14px;">$${(item.subtotal || (item.unitPrice * item.quantity) || 0).toFixed(2)}</td>
         </tr>
       `;
     }
 
     return getBrandedEmailLayout({
-      title: "ORDER CONFIRMED",
-      preheader: `Thank you for your order ${orderNumber}.`,
+      title: "ACQUISITION CONFIRMED",
+      preheader: `Your order ${orderNumber} is confirmed and entering fulfillment.`,
       bodyHtml: `
-        <p>Your purchase is locked in. We are preparing order <span class="highlight">${orderNumber}</span> for shipment.</p>
+        <p style="font-family: 'Courier New', Courier, monospace, sans-serif; font-size: 13px; color: #D1D1D6; line-height: 1.6;">
+          Your acquisition is confirmed under reference <span class="highlight">${orderNumber}</span>.
+          Our warehouse team has initiated verification and packaging protocols.
+        </p>
         <div class="divider"></div>
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
           <thead>
-            <tr style="border-bottom: 1px solid #1F1F1F; text-align: left; font-size: 12px; color: #8E8E93;">
-              <th style="padding-bottom: 12px;">ITEM</th>
+            <tr style="border-bottom: 1px solid #2B2B2B; text-align: left; font-size: 10px; color: #777777; font-family: 'Courier New', Courier, monospace, sans-serif; letter-spacing: 0.2em; text-transform: uppercase;">
+              <th style="padding-bottom: 12px;">ITEM ARCHIVE</th>
               <th style="padding-bottom: 12px; text-align: center;">QTY</th>
               <th style="padding-bottom: 12px; text-align: right;">TOTAL</th>
             </tr>
@@ -132,12 +146,13 @@ export class EmailService {
             ${itemsListHtml}
           </tbody>
         </table>
-        <div style="text-align: right; font-size: 16px; color: #FFFFFF; font-weight: 700; margin-top: 16px;">
-          GRAND TOTAL: INR ${grandTotal.toFixed(2)}
+        <div style="border-top: 1px solid #2B2B2B; padding-top: 16px; text-align: right; font-family: 'Courier New', Courier, monospace, sans-serif;">
+          <span style="font-size: 11px; color: #777777; letter-spacing: 0.2em; text-transform: uppercase; margin-right: 12px;">ACQUISITION TOTAL:</span>
+          <span style="font-size: 20px; color: #BEF500; font-weight: 900; letter-spacing: 0.05em;">$${grandTotal.toFixed(2)}</span>
         </div>
       `,
-      ctaText: "TRACK ORDER STATUS",
-      ctaLink: `${clientUrl}/account/orders`,
+      ctaText: "VIEW ORDER OVERWATCH",
+      ctaLink: `${clientUrl}/orders`,
     });
   }
 

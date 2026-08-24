@@ -58,7 +58,7 @@ const PaymentSchema = new Schema<IPayment>(
     },
     failureReason: { type: String, default: null },
     refundStatus: { type: String, default: null },
-    metadata: { type: Map, of: Schema.Types.Mixed, default: {} },
+    metadata: { type: Schema.Types.Mixed, default: {} },
   },
   { timestamps: true }
 );

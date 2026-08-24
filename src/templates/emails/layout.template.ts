@@ -8,12 +8,12 @@ export interface ILayoutOptions {
 
 export const getBrandedEmailLayout = (options: ILayoutOptions): string => {
   const { title, preheader = "", bodyHtml, ctaText, ctaLink } = options;
-
   const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
+
   const ctaSection = ctaText && ctaLink
     ? `
-      <div style="margin: 32px 0; text-align: center;">
-        <a href="${ctaLink}" target="_blank" style="background-color: #FFFFFF; color: #000000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; font-weight: 700; text-decoration: none; padding: 16px 32px; border-radius: 4px; display: inline-block; letter-spacing: 0.15em; text-transform: uppercase;">
+      <div style="margin: 36px 0 24px 0; text-align: center;">
+        <a href="${ctaLink}" target="_blank" style="background-color: #BEF500; color: #0B0B0B; font-family: 'Courier New', Courier, monospace, sans-serif; font-size: 12px; font-weight: 900; text-decoration: none; padding: 16px 36px; border-radius: 0px; display: inline-block; letter-spacing: 0.25em; text-transform: uppercase; border: 1px solid #BEF500;">
           ${ctaText}
         </a>
       </div>
@@ -29,8 +29,8 @@ export const getBrandedEmailLayout = (options: ILayoutOptions): string => {
       <title>${title}</title>
       <style>
         body {
-          background-color: #0A0A0A;
-          color: #D1D1D6;
+          background-color: #080808;
+          color: #E0E2D6;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
           margin: 0;
           padding: 0;
@@ -38,61 +38,76 @@ export const getBrandedEmailLayout = (options: ILayoutOptions): string => {
         }
         .container {
           max-width: 600px;
-          margin: 40px auto;
-          background-color: #0F0F0F;
-          border: 1px solid #1F1F1F;
-          border-radius: 8px;
+          margin: 32px auto;
+          background-color: #0E0E0E;
+          border: 1px solid #222222;
+          border-radius: 0px;
           overflow: hidden;
         }
         .header {
-          padding: 32px 24px;
+          padding: 32px 24px 20px 24px;
           text-align: center;
-          border-bottom: 1px solid #1F1F1F;
+          border-bottom: 1px solid #1C1C1C;
+          background-color: #090909;
         }
         .logo {
-          font-size: 26px;
+          font-size: 32px;
           font-weight: 900;
-          color: #FFFFFF;
-          letter-spacing: 0.3em;
+          color: #BEF500;
+          letter-spacing: 0.35em;
           text-transform: uppercase;
           text-decoration: none;
+          font-family: 'Courier New', Courier, monospace, sans-serif;
+        }
+        .tagline {
+          font-size: 9px;
+          color: #6E6E73;
+          letter-spacing: 0.3em;
+          text-transform: uppercase;
+          margin-top: 6px;
+          font-family: 'Courier New', Courier, monospace, sans-serif;
         }
         .content {
-          padding: 40px 32px;
+          padding: 36px 32px;
           line-height: 1.6;
-          font-size: 15px;
+          font-size: 14px;
         }
         .title {
           font-size: 20px;
-          font-weight: 700;
+          font-weight: 900;
           color: #FFFFFF;
           margin-top: 0;
-          margin-bottom: 24px;
-          letter-spacing: 0.08em;
+          margin-bottom: 20px;
+          letter-spacing: 0.12em;
           text-transform: uppercase;
-          text-align: center;
+          font-family: 'Courier New', Courier, monospace, sans-serif;
+          border-left: 3px solid #BEF500;
+          padding-left: 12px;
         }
         .footer {
-          padding: 32px 24px;
-          background-color: #070707;
-          border-top: 1px solid #1F1F1F;
+          padding: 28px 24px;
+          background-color: #060606;
+          border-top: 1px solid #1C1C1C;
           text-align: center;
           font-size: 11px;
-          color: #8E8E93;
+          color: #6E6E73;
+          font-family: 'Courier New', Courier, monospace, sans-serif;
         }
         .footer a {
-          color: #FFFFFF;
+          color: #BEF500;
           text-decoration: none;
-          margin: 0 10px;
-          letter-spacing: 0.1em;
+          margin: 0 12px;
+          letter-spacing: 0.15em;
+          font-size: 10px;
+          font-weight: bold;
         }
         .divider {
           height: 1px;
-          background-color: #1F1F1F;
+          background-color: #222222;
           margin: 24px 0;
         }
         .highlight {
-          color: #FFFFFF;
+          color: #BEF500;
           font-weight: bold;
         }
       </style>
@@ -102,6 +117,7 @@ export const getBrandedEmailLayout = (options: ILayoutOptions): string => {
       <div class="container">
         <div class="header">
           <a href="${clientUrl}" class="logo">BLUNT</a>
+          <div class="tagline">ARCHIVAL STREETWEAR ECOSYSTEM</div>
         </div>
         <div class="content">
           <h1 class="title">${title}</h1>
@@ -113,11 +129,11 @@ export const getBrandedEmailLayout = (options: ILayoutOptions): string => {
         <div class="footer">
           <p style="margin-bottom: 16px;">
             <a href="${clientUrl}/shop">SHOP</a>
-            <a href="${clientUrl}/account">ACCOUNT</a>
-            <a href="${clientUrl}/support">SUPPORT</a>
+            <a href="${clientUrl}/drop">LATEST DROP</a>
+            <a href="${clientUrl}/orders">MY ORDERS</a>
           </p>
-          <p style="margin-bottom: 8px;">© ${new Date().getFullYear()} BLUNT. ALL RIGHTS RESERVED.</p>
-          <p style="letter-spacing: 0.05em; font-size: 10px; color: #48484A;">STRICTLY LUXURY STREETWEAR.</p>
+          <p style="margin-bottom: 6px; font-size: 10px;">© ${new Date().getFullYear()} BLUNT STUDIOS. NO FILTER. JUST BLUNT.</p>
+          <p style="letter-spacing: 0.1em; font-size: 9px; color: #48484A;">FOR SUPPORT CONTACT SUPPORT@BLUNTSTUDIOS.COM</p>
         </div>
       </div>
     </body>

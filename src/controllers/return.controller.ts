@@ -71,7 +71,7 @@ export const createReturnRequest = asyncHandler(async (req: Request, res: Respon
   await order.save();
 
   // 8. Dispatch Email
-  const user = await UserModel.findById(userId).lean();
+  const user: any = await UserModel.findById(userId).lean();
   if (user && user.email) {
     await notificationService.sendReturnRequested(userId, user.email, order.orderNumber);
   }
@@ -170,7 +170,7 @@ export const updateReturnRequestStatus = asyncHandler(async (req: Request, res: 
   await order.save();
 
   // Send status update emails
-  const user = await UserModel.findById(returnReq.userId).lean();
+  const user: any = await UserModel.findById(returnReq.userId).lean();
   if (user && user.email) {
     if (status === "approved" && previousStatus !== "approved") {
       await notificationService.sendReturnApproved(String(user._id), user.email, order.orderNumber);

@@ -13,7 +13,7 @@ export const initiatePayment = asyncHandler(async (req: Request, res: Response) 
   }
 
   const payload = paymentCreateSchema.parse(req.body);
-  const session = await paymentService.createPaymentSession(userId, payload.checkoutId);
+  const session = await paymentService.createPaymentSession(userId, payload.checkoutId, payload.gateway);
 
   sendResponse(res, 201, true, "PAYMENT SESSION INITIALIZED SUCCESSFULLY", session);
 });

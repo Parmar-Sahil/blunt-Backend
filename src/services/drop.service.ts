@@ -9,7 +9,7 @@ export const dropService = {
    */
   async getNextDropNumber(): Promise<{ nextNumber: number; displayNumber: string; formattedDropNumber: string }> {
     // Find highest drop number ever recorded (including archived or soft-deleted)
-    const highestDrop = await Drop.findOne({})
+    const highestDrop: any = await Drop.findOne({})
       .sort({ dropNumber: -1 })
       .select("dropNumber")
       .lean();

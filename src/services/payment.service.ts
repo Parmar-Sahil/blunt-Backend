@@ -28,7 +28,11 @@ export class PaymentService {
     return provider;
   }
 
-  async createPaymentSession(userId: string, checkoutId: string): Promise<IPayment> {
+  async createPaymentSession(
+    userId: string,
+    checkoutId: string,
+    preferredGateway?: "stripe" | "razorpay"
+  ): Promise<any> {
     const checkoutSession = await checkoutService.getCheckoutSession(checkoutId, userId);
     if (checkoutSession.status !== "pending") {
       throw new BadRequestError(`CHECKOUT SESSION IS ALREADY '${checkoutSession.status.toUpperCase()}'`);
@@ -42,7 +46,10 @@ export class PaymentService {
       await paymentRepository.updateByPaymentId(existingPayment.paymentId, { status: "cancelled" });
     }
 
-    const gateway = checkoutSession.paymentGateway;
+    const gateway =
+      preferredGateway ||
+      (checkoutSession.paymentGateway as "stripe" | "razorpay") ||
+      "razorpay";
     const paymentId = "pay_" + crypto.randomBytes(12).toString("hex");
 
     const provider = this.getProvider(gateway);
@@ -55,6 +62,11 @@ export class PaymentService {
         checkoutId,
       },
     });
+
+    const keyId =
+      sessionResult.rawResponse?.keyId ||
+      process.env.RAZORPAY_KEY_ID ||
+      "rzp_test_TKRGgZpERKCcvo";
 
     const payment = await paymentRepository.create({
       paymentId,
@@ -69,12 +81,24 @@ export class PaymentService {
       status: "created",
       metadata: {
         clientSecret: sessionResult.clientSecret,
+        keyId,
         ...sessionResult.rawResponse,
       },
     });
 
-    console.log(`[LOG] Payment Session Created: ${payment.paymentId} for gateway ${gateway}`);
-    return payment;
+    console.log(`[PAYMENT] Session initialized: ${payment.paymentId} for ${gateway} (Order: ${sessionResult.gatewayOrderId})`);
+    
+    return {
+      paymentId: payment.paymentId,
+      checkoutId: payment.checkoutId,
+      gateway: payment.gateway,
+      amount: payment.amount,
+      currency: payment.currency,
+      gatewayOrderId: sessionResult.gatewayOrderId || payment.gatewayOrderId,
+      keyId,
+      clientSecret: sessionResult.clientSecret,
+      rawResponse: sessionResult.rawResponse,
+    };
   }
 
   async verifyPayment(options: {
@@ -83,7 +107,7 @@ export class PaymentService {
     gatewayPaymentId?: string | null;
     gatewayOrderId?: string | null;
     signature?: string | null;
-  }): Promise<IPayment> {
+  }): Promise<any> {
     const { paymentId, gateway, gatewayPaymentId, gatewayOrderId, signature } = options;
 
     const payment = await paymentRepository.findByPaymentId(paymentId);
@@ -91,9 +115,10 @@ export class PaymentService {
       throw new NotFoundError("PAYMENT RECORD NOT FOUND");
     }
 
-    if (payment.status === "paid") {
-      console.log(`[LOG] Payment ${paymentId} already marked PAID. Skipping verification.`);
-      return payment;
+    if (payment.status === "paid" && payment.orderId) {
+      console.log(`[PAYMENT] ${paymentId} already marked PAID. Returning existing order.`);
+      const existingOrder = await orderService.getOrderById(String(payment.orderId), String(payment.userId));
+      return { payment, order: existingOrder, success: true };
     }
 
     const provider = this.getProvider(gateway);
@@ -108,14 +133,18 @@ export class PaymentService {
       payment.transactionId = verifyResult.transactionId || verifyResult.gatewayPaymentId;
       payment.gatewayPaymentId = verifyResult.gatewayPaymentId;
       payment.gatewayOrderId = verifyResult.gatewayOrderId || payment.gatewayOrderId;
-      
+
       payment.metadata = {
-        ...payment.metadata,
+        ...(payment.metadata && typeof (payment.metadata as any).toObject === "function"
+          ? (payment.metadata as any).toObject()
+          : payment.metadata || {}),
         verificationResponse: verifyResult.rawResponse,
       };
+      payment.markModified("metadata");
 
       await payment.save();
 
+      // Finalize Order from Checkout and deduct inventory
       const order = await orderService.createOrderFromCheckout({
         userId: String(payment.userId),
         checkoutId: payment.checkoutId,
@@ -126,13 +155,19 @@ export class PaymentService {
       payment.orderId = order._id;
       await payment.save();
 
-      console.log(`[LOG] Payment Verified & Order Finalized: ${paymentId} | Order: ${order.orderNumber}`);
+      console.log(`[PAYMENT] Verified & Order Created: ${paymentId} -> Order ${order.orderNumber}`);
+
+      return {
+        payment,
+        order,
+        success: true,
+      };
     } else {
       payment.status = "failed";
       payment.failureReason = verifyResult.failureReason || "TRANSACTION VERIFICATION FAILED";
       await payment.save();
 
-      console.log(`[LOG] Payment Verification Failed: ${paymentId} | Reason: ${payment.failureReason}`);
+      console.log(`[PAYMENT] Verification Failed: ${paymentId} -> Reason: ${payment.failureReason}`);
 
       // Send Payment Failure Notification
       const user: any = await UserModel.findById(payment.userId).lean();
@@ -145,9 +180,9 @@ export class PaymentService {
           payment.failureReason || "TRANSACTION VERIFICATION FAILED"
         );
       }
-    }
 
-    return payment;
+      throw new BadRequestError(payment.failureReason || "PAYMENT VERIFICATION FAILED");
+    }
   }
 
   async handleWebhook(options: {
@@ -191,7 +226,6 @@ export class PaymentService {
             payment.failureReason = paymentIntent.last_payment_error?.message || "STRIPE TRANSACTION FAILED";
             await payment.save();
 
-            // Send Webhook Payment Failure Notification
             const user: any = await UserModel.findById(payment.userId).lean();
             if (user) {
               await notificationService.sendPaymentFailure(

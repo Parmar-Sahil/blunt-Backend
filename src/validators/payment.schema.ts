@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const paymentCreateSchema = z.object({
   checkoutId: z.string().min(5, "INVALID CHECKOUT ID"),
+  gateway: z.enum(["stripe", "razorpay"]).optional(),
 });
 
 export const paymentVerifySchema = z.object({
