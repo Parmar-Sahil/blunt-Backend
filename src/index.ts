@@ -26,7 +26,23 @@ if (typeof helmetMiddleware === "function") {
   app.use((helmet as any)());
 }
 
+// Explicit CORS handler to ensure preflight OPTIONS requests are answered immediately with 200 OK
+app.use((req: any, res: any, next: any) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Guest-ID,X-Requested-With,Accept,Origin");
+  }
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+  next();
+});
+
 app.use(cors(securityConfig.cors));
+app.options("*", cors(securityConfig.cors));
 app.use(
   express.json({
     limit: "10mb",

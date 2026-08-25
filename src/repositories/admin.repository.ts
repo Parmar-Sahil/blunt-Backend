@@ -7,11 +7,19 @@ import mongoose from "mongoose";
 export class AdminRepository {
   // --- Admin operations ---
   async findByEmail(email: string): Promise<IAdmin | null> {
-    const admin = await AdminModel.findOne({ email });
+    const normalized = email.trim().toLowerCase();
+    const emailFilter = {
+      $or: [
+        { email: normalized },
+        { email: new RegExp(`^${normalized.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") },
+      ],
+    };
+
+    const admin = await AdminModel.findOne(emailFilter);
     if (admin) return admin;
 
     // Check user model as fallback for existing admin records
-    const user = await UserModel.findOne({ email });
+    const user = await UserModel.findOne(emailFilter);
     if (user && (user.role === "superadmin" || user.role === "admin")) {
       // Auto-migrate to decoupled admins collection
       const migrated = new AdminModel({
