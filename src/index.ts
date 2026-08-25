@@ -35,21 +35,36 @@ app.use(cookieParser());
 // Request tracer logging
 app.use(requestLogger);
 
+// Health check endpoints for cloud platforms (Render, Railway, AWS, etc.) & keep-alive monitors
+app.get(["/", "/health", "/api/health"], (_req: any, res: any) => {
+  res.status(200).json({
+    status: "ok",
+    service: "blunt-backend",
+    environment: process.env.NODE_ENV || "development",
+    database: mongoose.connection.readyState === 1 ? "connected" : "connecting",
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // Mount auth/admin routes BEFORE the DB guard so token refresh always works
 // even while MongoDB is still connecting on startup
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 
 // DB readiness guard — return 503 for all data routes until MongoDB is connected
-// Auth routes above are exempt so the frontend can still refresh tokens during startup
-app.use((req: any, res: any, next: any) => {
+// DB readiness guard — ensure MongoDB is connected before handling data routes
+app.use(async (req: any, res: any, next: any) => {
   if (mongoose.connection.readyState !== 1) {
-    return res.status(503).json({
-      success: false,
-      message: "DATABASE CONNECTION NOT READY. PLEASE RETRY IN A MOMENT.",
-      data: null,
-      error: "ServiceUnavailable",
-    });
+    try {
+      await connectDatabase();
+    } catch {
+      return res.status(503).json({
+        success: false,
+        message: "DATABASE CONNECTION NOT READY. PLEASE RETRY IN A MOMENT.",
+        data: null,
+        error: "ServiceUnavailable",
+      });
+    }
   }
   next();
 });
@@ -60,12 +75,7 @@ app.use("/api/v1", v1Routes);
 // Global Error Handler
 app.use(errorHandler);
 
-// Start server immediately so process stays alive, but hold DB connection with retry
-app.listen(PORT, () => {
-  console.log(`[SERVER] CUSTOM EXPRESS AUTH SERVER RUNNING ON PORT ${PORT}`);
-});
-
-// Establish database connection with retry logic
+// Establish database connection with retry logic (for standalone node / local dev)
 const connectWithRetry = async (attempt = 1): Promise<void> => {
   try {
     await connectDatabase();
@@ -76,5 +86,14 @@ const connectWithRetry = async (attempt = 1): Promise<void> => {
   }
 };
 
-connectWithRetry();
+// Start standalone HTTP server unless running in a serverless environment (like Vercel)
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`[SERVER] CUSTOM EXPRESS AUTH SERVER RUNNING ON PORT ${PORT}`);
+  });
+  connectWithRetry();
+}
+
+export default app;
+
 

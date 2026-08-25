@@ -106,28 +106,39 @@ const seedDefaultData = async () => {
   }
 };
 
+let listenersRegistered = false;
+
 export const connectDatabase = async (): Promise<void> => {
-  mongoose.connection.on("connected", () => {
-    logger.info("[DB] MONGODB CONNECTED");
-    seedDefaultData();
-  });
+  if (mongoose.connection.readyState === 1) {
+    return;
+  }
 
-  mongoose.connection.on("error", (err) => {
-    logger.error("[DB] MONGODB CONNECTION ERROR", err);
-  });
+  if (!listenersRegistered) {
+    mongoose.connection.on("connected", () => {
+      logger.info("[DB] MONGODB CONNECTED");
+      seedDefaultData();
+    });
 
-  mongoose.connection.on("disconnected", () => {
-    logger.warn("[DB] MONGODB DISCONNECTED. ATTEMPTING RECONNECT...");
-  });
+    mongoose.connection.on("error", (err) => {
+      logger.error("[DB] MONGODB CONNECTION ERROR", err);
+    });
 
-  mongoose.connection.on("reconnected", () => {
-    logger.info("[DB] MONGODB RECONNECTED SUCCESSFULLY");
-  });
+    mongoose.connection.on("disconnected", () => {
+      logger.warn("[DB] MONGODB DISCONNECTED. ATTEMPTING RECONNECT...");
+    });
+
+    mongoose.connection.on("reconnected", () => {
+      logger.info("[DB] MONGODB RECONNECTED SUCCESSFULLY");
+    });
+
+    listenersRegistered = true;
+  }
 
   try {
     await mongoose.connect(dbConfig.uri, dbConfig.options);
   } catch (err: any) {
     logger.error("[DB] INITIAL MONGODB CONNECTION ATTEMPT FAILED", err.message);
+    throw err;
   }
 };
 
