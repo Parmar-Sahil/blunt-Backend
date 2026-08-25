@@ -19,7 +19,13 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Security & utility headers middleware
-app.use(helmet());
+const helmetMiddleware = typeof helmet === "function" ? helmet : (helmet as any)?.default;
+if (typeof helmetMiddleware === "function") {
+  app.use(helmetMiddleware());
+} else {
+  app.use((helmet as any)());
+}
+
 app.use(cors(securityConfig.cors));
 app.use(
   express.json({
