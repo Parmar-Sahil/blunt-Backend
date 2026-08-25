@@ -35,8 +35,8 @@ app.use(cookieParser());
 // Request tracer logging
 app.use(requestLogger);
 
-// Health check endpoints for cloud platforms (Render, Railway, AWS, etc.) & keep-alive monitors
-app.get(["/", "/health", "/api/health"], (_req: any, res: any) => {
+// Health check endpoints for cloud platforms (Vercel, Render, AWS, etc.) & keep-alive monitors
+app.get(["/", "/health", "/api/health", "/api"], (_req: any, res: any) => {
   res.status(200).json({
     status: "ok",
     service: "blunt-backend",
@@ -49,20 +49,22 @@ app.get(["/", "/health", "/api/health"], (_req: any, res: any) => {
 // Mount auth/admin routes BEFORE the DB guard so token refresh always works
 // even while MongoDB is still connecting on startup
 app.use("/api/auth", authRoutes);
+app.use("/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/admin", adminRoutes);
 
-// DB readiness guard — return 503 for all data routes until MongoDB is connected
 // DB readiness guard — ensure MongoDB is connected before handling data routes
 app.use(async (req: any, res: any, next: any) => {
   if (mongoose.connection.readyState !== 1) {
     try {
       await connectDatabase();
-    } catch {
+    } catch (err: any) {
+      console.error("[DB] Error connecting on-demand:", err?.message || err);
       return res.status(503).json({
         success: false,
         message: "DATABASE CONNECTION NOT READY. PLEASE RETRY IN A MOMENT.",
         data: null,
-        error: "ServiceUnavailable",
+        error: err?.message || "ServiceUnavailable",
       });
     }
   }
@@ -71,6 +73,7 @@ app.use(async (req: any, res: any, next: any) => {
 
 // Mount versioned V1 routes
 app.use("/api/v1", v1Routes);
+app.use("/v1", v1Routes);
 
 // Global Error Handler
 app.use(errorHandler);
